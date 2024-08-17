@@ -1,0 +1,43 @@
+name: Build BCC
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python-is-python3 bison build-essential cmake flex git libedit-dev libllvm11 llvm-11-dev libclang-11-dev zlib1g-dev libelf-dev libfl-dev python3-distutils checkinstall
+    
+    - name: Download and extract BCC
+      run: |
+        wget https://github.com/iovisor/bcc/releases/download/v0.25.0/bcc-src-with-submodule.tar.gz
+        tar xf bcc-src-with-submodule.tar.gz
+    
+    - name: Build BCC
+      run: |
+        cd bcc
+        mkdir build
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX=/usr -DPYTHON_CMD=python3 ..
+        make
+    
+    - name: Create package
+      run: |
+        cd bcc/build
+        sudo checkinstall --pkgname=bcc --pkgversion=0.25.0 --backup=no --deldoc=yes --fstrans=no --default
+    
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: bcc-package
+        path: bcc/build/*.deb
